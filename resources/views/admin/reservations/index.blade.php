@@ -3,298 +3,18 @@
 @section('title', 'Reservations')
 @section('page-heading', 'Reservations Management')
 
-@push('styles')
-<style>
-    .reservation-search {
-        min-height: 40px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--surface);
-        color: var(--text);
-        font-size: 12px;
-        box-shadow: 0 3px 10px rgba(17, 28, 24, .04);
-        transition: border-color .2s ease, box-shadow .2s ease;
-        width: 100%;
-        padding-right: 12px;
-    }
-
-    .reservation-search:focus {
-        outline: none;
-        border-color: var(--gold);
-        box-shadow: 0 0 0 3px rgba(214, 173, 105, .2);
-    }
-
-    /* ---------- STATUS DROPDOWN (custom, themed) ---------- */
-    .status-dd {
-        position: relative;
-        width: 100%;
-    }
-
-    .status-dd-btn {
-        width: 100%;
-        min-height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 0 12px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--surface);
-        color: var(--text);
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        box-shadow: 0 3px 10px rgba(17, 28, 24, .04);
-        transition: border-color .2s ease, box-shadow .2s ease;
-    }
-
-    .status-dd-btn:hover,
-    .status-dd-btn:focus-visible,
-    .status-dd.open .status-dd-btn {
-        outline: none;
-        border-color: var(--gold);
-        box-shadow: 0 0 0 3px rgba(214, 173, 105, .2);
-    }
-
-    .status-dd-btn .chev {
-        font-size: 10px;
-        color: var(--muted);
-        transition: transform .2s ease, color .2s ease;
-    }
-
-    .status-dd.open .status-dd-btn .chev {
-        transform: rotate(180deg);
-        color: var(--gold);
-    }
-
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        flex-shrink: 0;
-    }
-
-    .status-dd-menu {
-        position: absolute;
-        top: calc(100% + 6px);
-        left: 0;
-        right: 0;
-        z-index: 60;
-        min-width: 100%;
-        padding: 6px;
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        background: var(--surface);
-        box-shadow: 0 18px 40px rgba(9, 18, 14, .16);
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-        transform: translateY(-6px) scale(.98);
-        transform-origin: top;
-        transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
-    }
-
-    .status-dd.open .status-dd-menu {
-        opacity: 1;
-        visibility: visible;
-        pointer-events: auto;
-        transform: translateY(0) scale(1);
-        transition: opacity .16s ease, transform .16s ease, visibility 0s;
-    }
-
-    .status-dd-option {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 9px;
-        padding: 9px 10px;
-        border-radius: 9px;
-        color: var(--text);
-        font-size: 12px;
-        font-weight: 600;
-        text-align: left;
-        cursor: pointer;
-        transition: background .15s ease, color .15s ease;
-    }
-
-    .status-dd-option + .status-dd-option { margin-top: 2px; }
-
-    .status-dd-option:hover,
-    .status-dd-option:focus-visible {
-        outline: none;
-        background: rgba(214, 173, 105, .14);
-    }
-
-    .status-dd-option .check {
-        margin-left: auto;
-        font-size: 10px;
-        color: var(--gold);
-        opacity: 0;
-    }
-
-    .status-dd-option.selected {
-        color: #a17b41;
-        background: linear-gradient(100deg, rgba(214, 173, 105, .24), rgba(214, 173, 105, .07));
-    }
-
-    [data-theme="dark"] .status-dd-option.selected { color: var(--gold); }
-
-    .status-dd-option.selected .check { opacity: 1; }
-
-    /* SMALL SHARED MODAL (confirm / cancel / delete) */
-    .reservation-dialog-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 100;
-        display: grid;
-        place-items: center;
-        padding: 16px;
-        background: rgba(9, 18, 14, .6);
-        backdrop-filter: blur(4px);
-    }
-
-    .reservation-dialog-overlay.hidden { display: none; }
-
-    .reservation-dialog {
-        width: min(100%, 320px);
-        padding: 18px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--surface);
-        color: var(--text);
-        box-shadow: 0 24px 70px rgba(9, 18, 14, .26);
-        animation: reservation-dialog-enter .18s ease-out;
-    }
-
-    .reservation-dialog-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        font-size: 14px;
-        display: grid;
-        place-items: center;
-    }
-
-    .reservation-dialog-icon.is-confirm { color: #16a34a; background: rgba(34, 197, 94, .12); }
-    .reservation-dialog-icon.is-cancel,
-    .reservation-dialog-icon.is-delete  { color: #dc3545; background: rgba(239, 68, 68, .11); }
-
-    .reservation-dialog-back,
-    .reservation-dialog-action {
-        min-height: 36px;
-        padding: 0 13px;
-        border-radius: 10px;
-        font-size: 12px;
-        font-weight: 700;
-        transition: .2s ease;
-    }
-
-    .reservation-dialog-back {
-        border: 1px solid var(--border);
-        color: var(--text);
-        background: var(--surface);
-    }
-
-    .reservation-dialog-back:hover { background: var(--bg); }
-
-    .reservation-dialog-action {
-        color: white;
-    }
-
-    .reservation-dialog-action:hover { transform: translateY(-1px); }
-
-    .reservation-dialog-action.is-confirm {
-        background: linear-gradient(135deg, #34d399, #16a34a);
-        box-shadow: 0 6px 14px rgba(22, 163, 74, .22);
-    }
-
-    .reservation-dialog-action.is-cancel,
-    .reservation-dialog-action.is-delete {
-        background: linear-gradient(135deg, #ef6472, #c92f49);
-        box-shadow: 0 6px 14px rgba(201, 47, 73, .2);
-    }
-
-    /* Compact row action buttons (view / edit / delete) */
-    .reservation-row .admin-action-btn {
-        width: 30px;
-        height: 30px;
-        border-radius: 9px;
-        font-size: 12px;
-    }
-
-    @keyframes reservation-dialog-enter {
-        from { opacity: 0; transform: translateY(6px) scale(.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    @media (min-width: 640px) {
-        .reservation-search-wrap { width: 230px; }
-        .status-dd { width: 160px; }
-    }
-
-    /* Colored backgrounds for View, Edit and Delete action buttons */
-    .reservation-row .admin-action-btn.admin-action-view {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #1685e8 !important;
-        color: #ffffff !important;
-        border: 1px solid #1685e8 !important;
-        box-shadow: 0 3px 8px rgba(22, 133, 232, .18);
-        transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
-    }
-    .reservation-row .admin-action-btn.admin-action-view:hover {
-        background: #086fc8 !important;
-        border-color: #086fc8 !important;
-        color: #ffffff !important;
-        transform: translateY(-1px);
-        box-shadow: 0 5px 12px rgba(22, 133, 232, .25);
-    }
-
-    .reservation-row .admin-action-btn.admin-action-edit {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #f59e0b !important;
-        color: #ffffff !important;
-        border: 1px solid #f59e0b !important;
-        box-shadow: 0 3px 8px rgba(245, 158, 11, .18);
-        transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
-    }
-    .reservation-row .admin-action-btn.admin-action-edit:hover {
-        background: #d97706 !important;
-        border-color: #d97706 !important;
-        color: #ffffff !important;
-        transform: translateY(-1px);
-        box-shadow: 0 5px 12px rgba(217, 119, 6, .25);
-    }
-
-    .reservation-row .admin-action-btn.admin-action-delete {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #ef4444 !important;
-        color: #ffffff !important;
-        border: 1px solid #ef4444 !important;
-        box-shadow: 0 3px 8px rgba(239, 68, 68, .18);
-        transition: background .18s ease, transform .18s ease, box-shadow .18s ease;
-    }
-    .reservation-row .admin-action-btn.admin-action-delete:hover {
-        background: #dc2626 !important;
-        border-color: #dc2626 !important;
-        color: #ffffff !important;
-        transform: translateY(-1px);
-        box-shadow: 0 5px 12px rgba(220, 38, 38, .25);
-    }
-
-</style>
-@endpush
-
 @section('content')
 
 @php
     $totalBookings = $totalCount ?? $reservations->total();
+
+    // Shared icon-button style (Tailwind only)
+    $btn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs text-white shadow-sm ring-1 ring-inset ring-white/20 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
+    $btnView    = 'bg-gradient-to-br from-sky-400 to-blue-600 shadow-blue-500/30 hover:shadow-blue-500/40 focus-visible:ring-sky-400';
+    $btnEdit    = 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-500/30 hover:shadow-orange-500/40 focus-visible:ring-amber-400';
+    $btnConfirm = 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/30 hover:shadow-emerald-500/40 focus-visible:ring-emerald-400';
+    $btnCancel  = 'bg-gradient-to-br from-slate-400 to-slate-600 shadow-slate-500/30 hover:shadow-slate-500/40 focus-visible:ring-slate-400';
+    $btnDelete  = 'bg-gradient-to-br from-rose-400 to-red-600 shadow-red-500/30 hover:shadow-red-500/40 focus-visible:ring-red-400';
 @endphp
 
 <!-- PAGE INTRO -->
@@ -344,8 +64,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $totalBookings }}</h3>
         </div>
 
-        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#efd39a,#a17b41);box-shadow:0 5px 12px #a17b4133;">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm bg-gradient-to-br from-[#efd39a] to-[#a17b41] shadow-md shadow-[#a17b41]/30">
             <i class="fas fa-calendar-alt"></i>
         </div>
     </div>
@@ -356,8 +75,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $pendingCount ?? 0 }}</h3>
         </div>
 
-        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#fcd34d,#d9961a);box-shadow:0 5px 12px #d9961a33;">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm bg-gradient-to-br from-amber-300 to-[#d9961a] shadow-md shadow-[#d9961a]/30">
             <i class="fas fa-clock"></i>
         </div>
     </div>
@@ -368,8 +86,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $confirmedCount ?? 0 }}</h3>
         </div>
 
-        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#5fe0b0,#17966e);box-shadow:0 5px 12px #17966e33;">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm bg-gradient-to-br from-emerald-300 to-[#17966e] shadow-md shadow-[#17966e]/30">
             <i class="fas fa-check-circle"></i>
         </div>
     </div>
@@ -380,8 +97,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $cancelledCount ?? 0 }}</h3>
         </div>
 
-        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#ff9a9e,#d83d57);box-shadow:0 5px 12px #d83d5733;">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-xl flex items-center justify-center text-white text-sm bg-gradient-to-br from-rose-300 to-[#d83d57] shadow-md shadow-[#d83d57]/30">
             <i class="fas fa-calendar-times"></i>
         </div>
     </div>
@@ -403,63 +119,59 @@
 
         <div class="flex flex-col sm:flex-row gap-2.5">
 
-            <div class="reservation-search-wrap relative">
+            <div class="relative sm:w-60">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 muted text-[11px]"></i>
 
                 <input type="text"
                        id="searchInput"
                        placeholder="Search name, email, phone..."
-                       class="reservation-search pl-8">
+                       class="w-full min-h-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-8 pr-3 text-xs text-[var(--text)] shadow-sm outline-none transition focus:border-[var(--gold)] focus:ring-4 focus:ring-amber-400/20">
             </div>
 
             {{-- Custom status dropdown --}}
-            <div class="status-dd" id="statusDropdown">
+            <div class="group/dd relative w-full sm:w-40" id="statusDropdown" data-open="false">
 
                 <input type="hidden" id="statusFilter" value="">
 
                 <button type="button"
                         id="statusDropdownBtn"
-                        class="status-dd-btn"
+                        class="flex min-h-10 w-full cursor-pointer items-center justify-between gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text)] shadow-sm outline-none transition hover:border-[var(--gold)] hover:ring-4 hover:ring-amber-400/20 focus-visible:border-[var(--gold)] focus-visible:ring-4 focus-visible:ring-amber-400/20 group-data-[open=true]/dd:border-[var(--gold)] group-data-[open=true]/dd:ring-4 group-data-[open=true]/dd:ring-amber-400/20"
                         aria-haspopup="listbox"
                         aria-expanded="false">
 
-                    <span class="flex items-center gap-2 min-w-0">
-                        <span class="status-dot" id="statusDropdownDot" style="background:#94a3b8"></span>
+                    <span class="flex min-w-0 items-center gap-2">
+                        <span class="h-2 w-2 shrink-0 rounded-full" id="statusDropdownDot" style="background:#94a3b8"></span>
                         <span id="statusDropdownLabel" class="truncate">All Status</span>
                     </span>
 
-                    <i class="fas fa-chevron-down chev"></i>
+                    <i class="fas fa-chevron-down text-[10px] muted transition duration-200 group-data-[open=true]/dd:rotate-180 group-data-[open=true]/dd:text-amber-500"></i>
                 </button>
 
-                <div class="status-dd-menu" role="listbox" aria-label="Filter by status">
+                <div class="pointer-events-none invisible absolute left-0 right-0 top-[calc(100%+6px)] z-[60] min-w-full origin-top -translate-y-1.5 scale-95 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 opacity-0 shadow-2xl shadow-black/20 transition duration-150 group-data-[open=true]/dd:pointer-events-auto group-data-[open=true]/dd:visible group-data-[open=true]/dd:translate-y-0 group-data-[open=true]/dd:scale-100 group-data-[open=true]/dd:opacity-100"
+                     role="listbox" aria-label="Filter by status">
 
-                    <button type="button" class="status-dd-option selected" role="option" aria-selected="true"
-                            data-value="" data-color="#94a3b8">
-                        <span class="status-dot" style="background:#94a3b8"></span>
-                        <span>All Status</span>
-                        <i class="fas fa-check check"></i>
-                    </button>
+                    @php
+                        $statusOpts = [
+                            ['', 'All Status', '#94a3b8'],
+                            ['pending', 'Pending', '#eab308'],
+                            ['confirmed', 'Confirmed', '#16a34a'],
+                            ['cancelled', 'Cancelled', '#ef4444'],
+                        ];
+                    @endphp
 
-                    <button type="button" class="status-dd-option" role="option" aria-selected="false"
-                            data-value="pending" data-color="#eab308">
-                        <span class="status-dot" style="background:#eab308"></span>
-                        <span>Pending</span>
-                        <i class="fas fa-check check"></i>
-                    </button>
-
-                    <button type="button" class="status-dd-option" role="option" aria-selected="false"
-                            data-value="confirmed" data-color="#16a34a">
-                        <span class="status-dot" style="background:#16a34a"></span>
-                        <span>Confirmed</span>
-                        <i class="fas fa-check check"></i>
-                    </button>
-
-                    <button type="button" class="status-dd-option" role="option" aria-selected="false"
-                            data-value="cancelled" data-color="#ef4444">
-                        <span class="status-dot" style="background:#ef4444"></span>
-                        <span>Cancelled</span>
-                        <i class="fas fa-check check"></i>
-                    </button>
+                    @foreach($statusOpts as [$val, $label, $color])
+                        <button type="button"
+                                role="option"
+                                aria-selected="{{ $loop->first ? 'true' : 'false' }}"
+                                data-selected="{{ $loop->first ? 'true' : 'false' }}"
+                                data-value="{{ $val }}"
+                                data-color="{{ $color }}"
+                                class="status-option group/opt flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[var(--text)] outline-none transition hover:bg-amber-400/15 focus-visible:bg-amber-400/15 data-[selected=true]:bg-gradient-to-r data-[selected=true]:from-amber-400/25 data-[selected=true]:to-amber-400/5 data-[selected=true]:text-amber-700 dark:data-[selected=true]:text-amber-400 [&:not(:first-child)]:mt-0.5">
+                            <span class="h-2 w-2 shrink-0 rounded-full" style="background:{{ $color }}"></span>
+                            <span>{{ $label }}</span>
+                            <i class="fas fa-check ml-auto text-[10px] text-amber-500 opacity-0 group-data-[selected=true]/opt:opacity-100"></i>
+                        </button>
+                    @endforeach
 
                 </div>
 
@@ -509,8 +221,7 @@
                         <!-- CUSTOMER -->
                         <td class="px-4 py-2.5">
                             <div class="flex items-center gap-2.5">
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-gold text-xs shrink-0"
-                                     style="background:linear-gradient(145deg,#2c4236,#111c18)">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-gold text-xs shrink-0 bg-gradient-to-br from-[#2c4236] to-[#111c18]">
                                     <i class="fas fa-user"></i>
                                 </div>
 
@@ -584,10 +295,10 @@
 
                                         <button type="button"
                                                 onclick="openReservationDialog(this.form)"
-                                                class="rounded-lg bg-green-500 px-2.5 py-1.5 text-[11px] font-bold text-white transition hover:bg-green-600"
+                                                class="{{ $btn }} {{ $btnConfirm }}"
                                                 title="Confirm"
                                                 aria-label="Confirm {{ $reservation->name }}">
-                                            <i class="fas fa-check mr-1"></i> Confirm
+                                            <i class="fas fa-check"></i>
                                         </button>
                                     </form>
                                 @endif
@@ -612,24 +323,24 @@
 
                                         <button type="button"
                                                 onclick="openReservationDialog(this.form)"
-                                                class="rounded-lg bg-red-500 px-2.5 py-1.5 text-[11px] font-bold text-white transition hover:bg-red-600"
+                                                class="{{ $btn }} {{ $btnCancel }}"
                                                 title="Cancel"
                                                 aria-label="Cancel {{ $reservation->name }}">
-                                            <i class="fas fa-times mr-1"></i> Cancel
+                                            <i class="fas fa-ban"></i>
                                         </button>
                                     </form>
                                 @endif
 
                                 {{-- VIEW --}}
                                 <a href="{{ route('admin.reservations.show', $reservation->id) }}"
-                                   class="admin-action-btn admin-action-view"
+                                   class="{{ $btn }} {{ $btnView }}"
                                    title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
 
                                 {{-- EDIT --}}
                                 <a href="{{ route('admin.reservations.edit', $reservation->id) }}"
-                                   class="admin-action-btn admin-action-edit"
+                                   class="{{ $btn }} {{ $btnEdit }}"
                                    title="Edit">
                                     <i class="fas fa-pen"></i>
                                 </a>
@@ -644,7 +355,7 @@
 
                                     <button type="button"
                                             onclick="openReservationDialog(this.form)"
-                                            class="admin-action-btn admin-action-delete"
+                                            class="{{ $btn }} {{ $btnDelete }}"
                                             title="Delete"
                                             aria-label="Delete {{ $reservation->name }}">
                                         <i class="fas fa-trash"></i>
@@ -699,27 +410,36 @@
 
 <!-- SMALL SHARED DIALOG: CONFIRM / CANCEL / DELETE -->
 <div id="reservationDialogOverlay"
-     class="reservation-dialog-overlay hidden"
+     class="fixed inset-0 z-[100] hidden place-items-center bg-[#09120e]/60 p-4 backdrop-blur-sm"
      aria-hidden="true"
      onclick="if (event.target === this) closeReservationDialog()">
-    <section class="reservation-dialog" role="dialog" aria-modal="true" aria-labelledby="reservationDialogTitle">
 
-        <div id="reservationDialogIcon" class="reservation-dialog-icon is-confirm mb-3">
+    <section class="w-full max-w-[320px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-[18px] text-[var(--text)] shadow-2xl shadow-black/30"
+             role="dialog" aria-modal="true" aria-labelledby="reservationDialogTitle">
+
+        <div id="reservationDialogIcon"
+             class="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-emerald-500/10 text-sm text-emerald-600">
             <i class="fas fa-check-circle"></i>
         </div>
 
         <h2 id="reservationDialogTitle" class="text-base font-extrabold">Confirm booking?</h2>
 
-        <p class="muted text-xs mt-1.5 leading-5">
+        <p class="muted mt-1.5 text-xs leading-5">
             <span id="reservationDialogText"></span>
             <strong id="reservationDialogName" class="font-bold" style="color:var(--text);"></strong>?
         </p>
 
-        <div class="flex justify-end gap-2 mt-5">
-            <button type="button" class="reservation-dialog-back" onclick="closeReservationDialog()">
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button"
+                    class="reservation-dialog-back min-h-9 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-bold text-[var(--text)] transition hover:bg-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    onclick="closeReservationDialog()">
                 Go Back
             </button>
-            <button type="button" id="reservationDialogAction" class="reservation-dialog-action is-confirm" onclick="confirmReservationDialog()">
+
+            <button type="button"
+                    id="reservationDialogAction"
+                    class="min-h-9 rounded-[10px] bg-gradient-to-br from-emerald-400 to-emerald-600 px-3.5 text-xs font-bold text-white shadow-md shadow-emerald-600/25 transition hover:-translate-y-px"
+                    onclick="confirmReservationDialog()">
                 <i class="fas fa-check mr-1"></i> Yes, Confirm
             </button>
         </div>
@@ -734,24 +454,34 @@
     let reservationForm = null;
     let reservationTrigger = null;
 
+    // Full Tailwind class strings (kept complete so Tailwind can detect them)
+    const dialogIconBase = 'mb-3 grid h-10 w-10 place-items-center rounded-xl text-sm ';
+    const dialogActionBase = 'min-h-9 rounded-[10px] px-3.5 text-xs font-bold text-white transition hover:-translate-y-px ';
+
     const reservationDialogConfig = {
         confirm: {
             icon: 'fa-check-circle',
             title: 'Confirm booking?',
             text: 'Are you sure you want to confirm the booking of',
-            button: '<i class="fas fa-check mr-1"></i> Yes, Confirm'
+            button: '<i class="fas fa-check mr-1"></i> Yes, Confirm',
+            iconClass: 'bg-emerald-500/10 text-emerald-600',
+            actionClass: 'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-md shadow-emerald-600/25'
         },
         cancel: {
             icon: 'fa-calendar-times',
             title: 'Cancel booking?',
             text: 'Are you sure you want to cancel the booking of',
-            button: '<i class="fas fa-times mr-1"></i> Yes, Cancel'
+            button: '<i class="fas fa-ban mr-1"></i> Yes, Cancel',
+            iconClass: 'bg-slate-500/10 text-slate-600',
+            actionClass: 'bg-gradient-to-br from-slate-400 to-slate-600 shadow-md shadow-slate-600/25'
         },
         delete: {
             icon: 'fa-trash-alt',
             title: 'Delete reservation?',
             text: 'This will permanently delete the reservation of',
-            button: '<i class="fas fa-trash-alt mr-1"></i> Delete'
+            button: '<i class="fas fa-trash-alt mr-1"></i> Delete',
+            iconClass: 'bg-red-500/10 text-red-500',
+            actionClass: 'bg-gradient-to-br from-rose-400 to-red-600 shadow-md shadow-red-600/25'
         }
     };
 
@@ -759,17 +489,16 @@
         reservationForm = form;
         reservationTrigger = document.activeElement;
 
-        const type = form.dataset.reservationType;
-        const config = reservationDialogConfig[type];
+        const config = reservationDialogConfig[form.dataset.reservationType];
 
         const overlay = document.getElementById('reservationDialogOverlay');
         const icon = document.getElementById('reservationDialogIcon');
         const action = document.getElementById('reservationDialogAction');
 
-        icon.className = 'reservation-dialog-icon mb-3 is-' + type;
+        icon.className = dialogIconBase + config.iconClass;
         icon.innerHTML = '<i class="fas ' + config.icon + '"></i>';
 
-        action.className = 'reservation-dialog-action is-' + type;
+        action.className = dialogActionBase + config.actionClass;
         action.innerHTML = config.button;
 
         document.getElementById('reservationDialogTitle').textContent = config.title;
@@ -777,6 +506,7 @@
         document.getElementById('reservationDialogName').textContent = form.dataset.reservationName;
 
         overlay.classList.remove('hidden');
+        overlay.classList.add('grid');
         overlay.setAttribute('aria-hidden', 'false');
         overlay.querySelector('.reservation-dialog-back').focus();
     }
@@ -784,6 +514,7 @@
     function closeReservationDialog() {
         const overlay = document.getElementById('reservationDialogOverlay');
         overlay.classList.add('hidden');
+        overlay.classList.remove('grid');
         overlay.setAttribute('aria-hidden', 'true');
         reservationForm = null;
         reservationTrigger?.focus();
@@ -799,7 +530,7 @@
 
     // Search and status filter
     const searchInput = document.getElementById('searchInput');
-    const statusFilter = document.getElementById('statusFilter'); // hidden input, set by the dropdown
+    const statusFilter = document.getElementById('statusFilter');
 
     function filterReservations() {
         const search = searchInput.value.toLowerCase().trim();
@@ -828,26 +559,28 @@
 
     searchInput?.addEventListener('input', filterReservations);
 
-    // Custom status dropdown
+    // Custom status dropdown (state lives in data-open / data-selected)
     const statusDropdown = document.getElementById('statusDropdown');
     const statusButton = document.getElementById('statusDropdownBtn');
     const statusLabel = document.getElementById('statusDropdownLabel');
     const statusDot = document.getElementById('statusDropdownDot');
-    const statusOptions = [...statusDropdown.querySelectorAll('.status-dd-option')];
+    const statusOptions = [...statusDropdown.querySelectorAll('.status-option')];
+
+    const isDropdownOpen = () => statusDropdown.dataset.open === 'true';
 
     function setStatusDropdown(open) {
-        statusDropdown.classList.toggle('open', open);
+        statusDropdown.dataset.open = String(open);
         statusButton.setAttribute('aria-expanded', String(open));
     }
 
     function chooseStatus(option) {
         statusFilter.value = option.dataset.value;
-        statusLabel.textContent = option.querySelector('span:not(.status-dot)').textContent.trim();
+        statusLabel.textContent = option.querySelector('span:not(.rounded-full)').textContent.trim();
         statusDot.style.background = option.dataset.color;
 
         statusOptions.forEach(o => {
             const active = o === option;
-            o.classList.toggle('selected', active);
+            o.dataset.selected = String(active);
             o.setAttribute('aria-selected', String(active));
         });
 
@@ -855,9 +588,7 @@
         filterReservations();
     }
 
-    statusButton.addEventListener('click', () => {
-        setStatusDropdown(!statusDropdown.classList.contains('open'));
-    });
+    statusButton.addEventListener('click', () => setStatusDropdown(!isDropdownOpen()));
 
     statusOptions.forEach(option => {
         option.addEventListener('click', () => chooseStatus(option));
@@ -874,7 +605,7 @@
         setStatusDropdown(true);
 
         const current = statusOptions.indexOf(document.activeElement);
-        const selected = statusOptions.findIndex(o => o.classList.contains('selected'));
+        const selected = statusOptions.findIndex(o => o.dataset.selected === 'true');
         const step = event.key === 'ArrowDown' ? 1 : -1;
         const next = current === -1
             ? Math.max(selected, 0)
@@ -886,7 +617,7 @@
     document.addEventListener('keydown', event => {
         if (event.key !== 'Escape') return;
 
-        if (statusDropdown.classList.contains('open')) {
+        if (isDropdownOpen()) {
             setStatusDropdown(false);
             statusButton.focus();
         }

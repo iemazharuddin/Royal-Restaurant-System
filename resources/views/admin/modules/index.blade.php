@@ -1,3 +1,4 @@
+
 @extends('layouts.admin')
 
 @section('title', $title)
@@ -24,7 +25,6 @@
         box-shadow: 0 0 0 3px rgba(214, 173, 105, .2);
     }
 
-    /* DELETE CARD (compact) */
     .resource-delete-overlay {
         position: fixed;
         inset: 0;
@@ -100,7 +100,6 @@
         box-shadow: 0 8px 18px rgba(201, 47, 73, .28);
     }
 
-    /* Compact row action buttons */
     .resource-row .admin-action-btn {
         width: 30px;
         height: 30px;
@@ -113,10 +112,10 @@
                     transform .18s ease, box-shadow .18s ease;
     }
 
-    /* Blue: Show / View */
+    /* View button */
     .resource-row .admin-action-btn.admin-action-view {
         background: #1685e8 !important;
-        color: #ffffff !important;
+        color: #fff !important;
         border: 1px solid #1685e8 !important;
         box-shadow: 0 3px 8px rgba(22, 133, 232, .18);
     }
@@ -124,15 +123,14 @@
     .resource-row .admin-action-btn.admin-action-view:hover {
         background: #086fc8 !important;
         border-color: #086fc8 !important;
-        color: #ffffff !important;
+        color: #fff !important;
         transform: translateY(-1px);
-        box-shadow: 0 5px 12px rgba(22, 133, 232, .25);
     }
 
-    /* Orange: Edit */
+    /* Edit button */
     .resource-row .admin-action-btn.admin-action-edit {
         background: #f59e0b !important;
-        color: #ffffff !important;
+        color: #fff !important;
         border: 1px solid #f59e0b !important;
         box-shadow: 0 3px 8px rgba(245, 158, 11, .18);
     }
@@ -140,15 +138,13 @@
     .resource-row .admin-action-btn.admin-action-edit:hover {
         background: #d97706 !important;
         border-color: #d97706 !important;
-        color: #ffffff !important;
         transform: translateY(-1px);
-        box-shadow: 0 5px 12px rgba(217, 119, 6, .25);
     }
 
-    /* Red: Delete */
+    /* Delete button */
     .resource-row .admin-action-btn.admin-action-delete {
         background: #ef4444 !important;
-        color: #ffffff !important;
+        color: #fff !important;
         border: 1px solid #ef4444 !important;
         box-shadow: 0 3px 8px rgba(239, 68, 68, .18);
     }
@@ -156,9 +152,7 @@
     .resource-row .admin-action-btn.admin-action-delete:hover {
         background: #dc2626 !important;
         border-color: #dc2626 !important;
-        color: #ffffff !important;
         transform: translateY(-1px);
-        box-shadow: 0 5px 12px rgba(220, 38, 38, .25);
     }
 
     @keyframes resource-dialog-enter {
@@ -174,17 +168,13 @@
 
 @section('content')
 
-<!-- PAGE INTRO -->
 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
-
     <div>
         <p class="text-[10px] gold font-bold uppercase tracking-widest">Management</p>
-
         <h1 class="text-xl sm:text-2xl font-extrabold mt-1"
             style="font-family:'Playfair Display',serif;">
             {{ $title }}
         </h1>
-
         <p class="text-xs muted mt-1">{{ $description }}</p>
     </div>
 
@@ -193,10 +183,8 @@
         <i class="fas fa-plus"></i>
         Add New Record
     </a>
-
 </div>
 
-<!-- FLASH MESSAGES -->
 @if(session('success'))
     <div class="mb-4 p-3 rounded-xl bg-green-500/10 text-green-600 text-xs">
         <i class="fas fa-check-circle mr-2"></i>
@@ -210,7 +198,6 @@
     </div>
 @endif
 
-<!-- TABLE -->
 <div class="surface min-w-0 overflow-hidden">
 
     <form method="GET"
@@ -224,10 +211,8 @@
         </div>
 
         <div class="flex gap-2">
-
             <div class="resource-search-wrap relative flex-1 md:flex-none">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 muted text-[11px]"></i>
-
                 <input type="search"
                        name="search"
                        value="{{ request('search') }}"
@@ -240,15 +225,11 @@
                     aria-label="Search">
                 <i class="fas fa-search"></i>
             </button>
-
         </div>
-
     </form>
 
     <div class="overflow-x-auto">
-
         <table class="admin-table w-full text-left text-xs min-w-[640px]">
-
             <thead>
                 <tr>
                     <th class="px-4 py-3 muted font-bold">#</th>
@@ -260,9 +241,7 @@
             </thead>
 
             <tbody>
-
                 @forelse($records as $record)
-
                     @php
                         $recordLabel = \Illuminate\Support\Str::limit(
                             (string) (data_get($record, $columns[0]['key'] ?? 'id') ?? ('Record #' . $record->id)),
@@ -271,7 +250,6 @@
                     @endphp
 
                     <tr class="resource-row border-b" style="border-color:var(--border)">
-
                         <td class="px-4 py-2.5 muted">
                             {{ $records->firstItem() + $loop->index }}
                         </td>
@@ -303,6 +281,16 @@
                         <td class="px-4 py-2.5">
                             <div class="flex items-center justify-end gap-1.5">
 
+                                {{-- Orders View Button --}}
+                                @if($resource === 'orders')
+                                    <a href="{{ route('admin.orders.show', $record->id) }}"
+                                       class="admin-action-btn admin-action-view"
+                                       title="View Order"
+                                       aria-label="View {{ $recordLabel }}">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                @endif
+
                                 <a href="{{ route('admin.' . $resource . '.edit', $record->id) }}"
                                    class="admin-action-btn admin-action-edit"
                                    title="Edit"
@@ -314,7 +302,6 @@
                                       action="{{ route('admin.' . $resource . '.destroy', $record->id) }}"
                                       data-resource-delete="{{ $recordLabel }}"
                                       data-resource-type="{{ $title }}">
-
                                     @csrf
                                     @method('DELETE')
 
@@ -325,61 +312,49 @@
                                             aria-label="Delete {{ $recordLabel }}">
                                         <i class="fas fa-trash"></i>
                                     </button>
-
                                 </form>
-
                             </div>
                         </td>
-
                     </tr>
 
                 @empty
-
                     <tr>
                         <td colspan="{{ count($columns) + 2 }}" class="text-center py-10">
-
                             <div class="text-3xl muted mb-3">
                                 <i class="fas fa-inbox"></i>
                             </div>
-
                             <h3 class="font-bold text-base">No {{ $title }} Found</h3>
-
                             <p class="text-xs muted mt-1.5">
                                 Records will appear here once you add them.
                             </p>
-
                             <a href="{{ route('admin.' . $resource . '.create') }}"
                                class="admin-add-btn inline-flex mt-4 px-4 py-2.5 rounded-xl text-xs">
                                 <i class="fas fa-plus mr-2"></i>
                                 Add New Record
                             </a>
-
                         </td>
                     </tr>
-
                 @endforelse
-
             </tbody>
-
         </table>
-
     </div>
 
-    <!-- PAGINATION -->
     @if($records->hasPages())
         <div class="p-4 border-t text-xs" style="border-color:var(--border)">
             {{ $records->links() }}
         </div>
     @endif
-
 </div>
 
-<!-- DELETE CARD -->
 <div id="resourceDeleteOverlay"
      class="resource-delete-overlay hidden"
      aria-hidden="true"
      onclick="if (event.target === this) closeResourceDeleteDialog()">
-    <section class="resource-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="resourceDeleteTitle">
+
+    <section class="resource-delete-dialog"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="resourceDeleteTitle">
 
         <div class="resource-delete-icon mb-3">
             <i class="fas fa-trash-alt"></i>
@@ -403,14 +378,17 @@
         </div>
 
         <div class="flex justify-end gap-2 mt-4">
-            <button type="button" class="resource-delete-cancel" onclick="closeResourceDeleteDialog()">
+            <button type="button"
+                    class="resource-delete-cancel"
+                    onclick="closeResourceDeleteDialog()">
                 Cancel
             </button>
-            <button type="button" class="resource-delete-confirm" onclick="confirmResourceDelete()">
+            <button type="button"
+                    class="resource-delete-confirm"
+                    onclick="confirmResourceDelete()">
                 <i class="fas fa-trash-alt mr-1"></i> Delete
             </button>
         </div>
-
     </section>
 </div>
 
@@ -426,8 +404,13 @@
         resourceDeleteTrigger = document.activeElement;
 
         const overlay = document.getElementById('resourceDeleteOverlay');
-        document.getElementById('resourceDeleteName').textContent = form.dataset.resourceDelete;
-        document.getElementById('resourceDeleteType').textContent = form.dataset.resourceType || '';
+
+        document.getElementById('resourceDeleteName').textContent =
+            form.dataset.resourceDelete;
+
+        document.getElementById('resourceDeleteType').textContent =
+            form.dataset.resourceType || '';
+
         overlay.classList.remove('hidden');
         overlay.setAttribute('aria-hidden', 'false');
         overlay.querySelector('.resource-delete-cancel').focus();
@@ -435,20 +418,23 @@
 
     function closeResourceDeleteDialog() {
         const overlay = document.getElementById('resourceDeleteOverlay');
+
         overlay.classList.add('hidden');
         overlay.setAttribute('aria-hidden', 'true');
+
         resourceDeleteForm = null;
         resourceDeleteTrigger?.focus();
     }
 
     function confirmResourceDelete() {
         if (!resourceDeleteForm) return;
-
         resourceDeleteForm.submit();
     }
 
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && !document.getElementById('resourceDeleteOverlay').classList.contains('hidden')) {
+        const overlay = document.getElementById('resourceDeleteOverlay');
+
+        if (event.key === 'Escape' && !overlay.classList.contains('hidden')) {
             closeResourceDeleteDialog();
         }
     });

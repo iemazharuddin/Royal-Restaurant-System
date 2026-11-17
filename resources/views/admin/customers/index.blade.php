@@ -3,156 +3,18 @@
 @section('title', 'Menu Items')
 @section('page-heading', 'Menu Items')
 
-@push('styles')
-<style>
-    .menu-item-search,
-    .menu-item-status {
-        min-height: 40px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--surface);
-        color: var(--text);
-        font-size: 12px;
-        box-shadow: 0 3px 10px rgba(17, 28, 24, .04);
-        transition: border-color .2s ease, box-shadow .2s ease;
-    }
-
-    .menu-item-search {
-        width: 100%;
-        padding-right: 12px;
-    }
-
-    .menu-item-search:focus,
-    .menu-item-status:focus {
-        outline: none;
-        border-color: var(--gold);
-        box-shadow: 0 0 0 3px rgba(214, 173, 105, .2);
-    }
-
-    .menu-item-status {
-        width: 100%;
-        appearance: none;
-        padding: 0 34px 0 12px;
-        cursor: pointer;
-    }
-
-    .menu-item-select-wrap {
-        position: relative;
-        width: 100%;
-    }
-
-    .menu-item-select-wrap .fa-chevron-down {
-        position: absolute;
-        top: 50%;
-        right: 13px;
-        color: var(--muted);
-        font-size: 10px;
-        pointer-events: none;
-        transform: translateY(-50%);
-    }
-
-    /* DELETE CARD (compact) */
-    .menu-delete-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 100;
-        display: grid;
-        place-items: center;
-        padding: 16px;
-        background: rgba(9, 18, 14, .6);
-        backdrop-filter: blur(4px);
-    }
-
-    .menu-delete-overlay.hidden { display: none; }
-
-    .menu-delete-dialog {
-        width: min(100%, 320px);
-        padding: 18px;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        background: var(--surface);
-        color: var(--text);
-        box-shadow: 0 24px 70px rgba(9, 18, 14, .26);
-        animation: menu-dialog-enter .18s ease-out;
-    }
-
-    .menu-delete-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        font-size: 14px;
-        display: grid;
-        place-items: center;
-        color: #dc3545;
-        background: rgba(239, 68, 68, .11);
-    }
-
-    .menu-delete-target {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-top: 12px;
-        padding: 9px 11px;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--bg);
-    }
-
-    .menu-delete-cancel,
-    .menu-delete-confirm {
-        min-height: 36px;
-        padding: 0 13px;
-        border-radius: 10px;
-        font-size: 12px;
-        font-weight: 700;
-        transition: .2s ease;
-    }
-
-    .menu-delete-cancel {
-        border: 1px solid var(--border);
-        color: var(--text);
-        background: var(--surface);
-    }
-
-    .menu-delete-cancel:hover { background: var(--bg); }
-
-    .menu-delete-confirm {
-        color: white;
-        background: linear-gradient(135deg, #ef6472, #c92f49);
-        box-shadow: 0 6px 14px rgba(201, 47, 73, .2);
-    }
-
-    .menu-delete-confirm:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 18px rgba(201, 47, 73, .28);
-    }
-
-    /* Compact row action buttons */
-    .menu-row .admin-action-btn {
-        width: 30px;
-        height: 30px;
-        border-radius: 9px;
-        font-size: 12px;
-    }
-
-    @keyframes menu-dialog-enter {
-        from { opacity: 0; transform: translateY(6px) scale(.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    @media (min-width: 640px) {
-        .menu-item-search-wrap { width: 230px; }
-        .menu-item-select-wrap { width: 170px; }
-    }
-</style>
-@endpush
-
 @section('content')
 
 @php
     $totalItems     = $menuItems->total();
     $availableItems = \App\Models\MenuItem::where('is_available', true)->count();
     $featuredItems  = \App\Models\MenuItem::where('is_featured', true)->count();
+
+    // Shared icon-button style (Tailwind only)
+    $btn = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs text-white shadow-sm ring-1 ring-inset ring-white/20 transition duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2';
+    $btnView   = 'bg-gradient-to-br from-sky-400 to-blue-600 shadow-blue-500/30 hover:shadow-blue-500/40 focus-visible:ring-sky-400';
+    $btnEdit   = 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-500/30 hover:shadow-orange-500/40 focus-visible:ring-amber-400';
+    $btnDelete = 'bg-gradient-to-br from-rose-400 to-red-600 shadow-red-500/30 hover:shadow-red-500/40 focus-visible:ring-red-400';
 @endphp
 
 <!-- PAGE INTRO -->
@@ -202,8 +64,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $totalItems }}</h3>
         </div>
 
-        <div class="hidden sm:flex w-10 h-10 shrink-0 rounded-xl items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#a78bfa,#6545c4);box-shadow:0 5px 12px #6545c433;">
+        <div class="hidden sm:flex w-10 h-10 shrink-0 rounded-xl items-center justify-center text-white text-sm bg-gradient-to-br from-violet-400 to-[#6545c4] shadow-md shadow-[#6545c4]/30">
             <i class="fas fa-utensils"></i>
         </div>
     </div>
@@ -214,8 +75,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $availableItems }}</h3>
         </div>
 
-        <div class="hidden sm:flex w-10 h-10 shrink-0 rounded-xl items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#5fe0b0,#17966e);box-shadow:0 5px 12px #17966e33;">
+        <div class="hidden sm:flex w-10 h-10 shrink-0 rounded-xl items-center justify-center text-white text-sm bg-gradient-to-br from-emerald-300 to-[#17966e] shadow-md shadow-[#17966e]/30">
             <i class="fas fa-check-circle"></i>
         </div>
     </div>
@@ -226,8 +86,7 @@
             <h3 class="text-lg sm:text-2xl font-extrabold mt-1">{{ $featuredItems }}</h3>
         </div>
 
-        <div class="hidden sm:flex w-10 h-10 shrink-0 rounded-xl items-center justify-center text-white text-sm"
-             style="background:linear-gradient(145deg,#ffe2a0,#c78c28);box-shadow:0 5px 12px #c78c2833;">
+        <div class="hidden sm:flex w-10 h-10 shrink-0 rounded-xl items-center justify-center text-white text-sm bg-gradient-to-br from-amber-200 to-[#c78c28] shadow-md shadow-[#c78c28]/30">
             <i class="fas fa-star"></i>
         </div>
     </div>
@@ -235,7 +94,7 @@
 </div>
 
 <!-- MENU ITEMS TABLE -->
-<div class="surface min-w-0 overflow-hidden">
+<div class="surface min-w-0">
 
     <div class="p-4 border-b flex flex-col md:flex-row gap-3 md:items-center md:justify-between"
          style="border-color:var(--border)">
@@ -249,23 +108,61 @@
 
         <div class="flex flex-col sm:flex-row gap-2.5">
 
-            <div class="menu-item-search-wrap relative">
+            <div class="relative sm:w-60">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 muted text-[11px]"></i>
 
                 <input type="text"
                        id="menuSearch"
                        placeholder="Search menu items..."
-                       class="menu-item-search pl-8">
+                       class="w-full min-h-10 rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-8 pr-3 text-xs text-[var(--text)] shadow-sm outline-none transition focus:border-[var(--gold)] focus:ring-4 focus:ring-amber-400/20">
             </div>
 
-            <div class="menu-item-select-wrap">
-                <select id="categoryFilter" class="menu-item-status">
-                    <option value="">All Categories</option>
+            {{-- Custom category dropdown --}}
+            <div class="group/dd relative w-full sm:w-48" id="categoryDropdown" data-open="false">
+
+                <input type="hidden" id="categoryFilter" value="">
+
+                <button type="button"
+                        id="categoryDropdownBtn"
+                        class="flex min-h-10 w-full cursor-pointer items-center justify-between gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--text)] shadow-sm outline-none transition hover:border-[var(--gold)] hover:ring-4 hover:ring-amber-400/20 focus-visible:border-[var(--gold)] focus-visible:ring-4 focus-visible:ring-amber-400/20 group-data-[open=true]/dd:border-[var(--gold)] group-data-[open=true]/dd:ring-4 group-data-[open=true]/dd:ring-amber-400/20"
+                        aria-haspopup="listbox"
+                        aria-expanded="false">
+
+                    <span class="flex min-w-0 items-center gap-2">
+                        <i class="fas fa-layer-group text-[11px] gold"></i>
+                        <span id="categoryDropdownLabel" class="truncate">All Categories</span>
+                    </span>
+
+                    <i class="fas fa-chevron-down text-[10px] muted transition duration-200 group-data-[open=true]/dd:rotate-180 group-data-[open=true]/dd:text-amber-500"></i>
+                </button>
+
+                <div class="pointer-events-none invisible absolute left-0 right-0 top-[calc(100%+6px)] z-[60] max-h-[260px] min-w-full origin-top -translate-y-1.5 scale-95 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-1.5 opacity-0 shadow-2xl shadow-black/20 transition duration-150 group-data-[open=true]/dd:pointer-events-auto group-data-[open=true]/dd:visible group-data-[open=true]/dd:translate-y-0 group-data-[open=true]/dd:scale-100 group-data-[open=true]/dd:opacity-100"
+                     role="listbox" aria-label="Filter by category">
+
+                    <button type="button"
+                            role="option"
+                            aria-selected="true"
+                            data-selected="true"
+                            data-value=""
+                            class="cat-option group/opt flex w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[var(--text)] outline-none transition hover:bg-amber-400/15 focus-visible:bg-amber-400/15 data-[selected=true]:bg-gradient-to-r data-[selected=true]:from-amber-400/25 data-[selected=true]:to-amber-400/5 data-[selected=true]:text-amber-700 dark:data-[selected=true]:text-amber-400">
+                        <span>All Categories</span>
+                        <i class="fas fa-check text-[10px] text-amber-500 opacity-0 group-data-[selected=true]/opt:opacity-100"></i>
+                    </button>
+
                     @foreach($categories as $category)
-                        <option value="{{ strtolower($category->name) }}">{{ $category->name }}</option>
+                        <button type="button"
+                                role="option"
+                                aria-selected="false"
+                                data-selected="false"
+                                data-value="{{ strtolower($category->name) }}"
+                                class="cat-option group/opt mt-0.5 flex w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-[var(--text)] outline-none transition hover:bg-amber-400/15 focus-visible:bg-amber-400/15 data-[selected=true]:bg-gradient-to-r data-[selected=true]:from-amber-400/25 data-[selected=true]:to-amber-400/5 data-[selected=true]:text-amber-700 dark:data-[selected=true]:text-amber-400">
+                            <span class="truncate">{{ $category->name }}</span>
+                            <i class="fas fa-check text-[10px] text-amber-500 opacity-0 group-data-[selected=true]/opt:opacity-100"></i>
+                        </button>
                     @endforeach
-                </select>
-                <i class="fas fa-chevron-down"></i>
+
+                </div>
+
             </div>
 
         </div>
@@ -304,8 +201,7 @@
                                          class="w-9 h-9 rounded-lg object-cover shrink-0"
                                          alt="{{ $item->name }}">
                                 @else
-                                    <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs shrink-0"
-                                         style="background:linear-gradient(145deg,#a78bfa,#6545c4)">
+                                    <div class="w-9 h-9 rounded-lg flex items-center justify-center text-white text-xs shrink-0 bg-gradient-to-br from-violet-400 to-[#6545c4]">
                                         <i class="fas fa-utensils"></i>
                                     </div>
                                 @endif
@@ -354,14 +250,14 @@
                             <div class="flex items-center justify-end gap-1.5">
 
                                 <a href="{{ route('admin.menu-items.show', $item) }}"
-                                   class="admin-action-btn admin-action-view"
+                                   class="{{ $btn }} {{ $btnView }}"
                                    title="View"
                                    aria-label="View {{ $item->name }}">
                                     <i class="fas fa-eye"></i>
                                 </a>
 
                                 <a href="{{ route('admin.menu-items.edit', $item) }}"
-                                   class="admin-action-btn admin-action-edit"
+                                   class="{{ $btn }} {{ $btnEdit }}"
                                    title="Edit"
                                    aria-label="Edit {{ $item->name }}">
                                     <i class="fas fa-pen"></i>
@@ -377,7 +273,7 @@
 
                                     <button type="button"
                                             onclick="openMenuDeleteDialog(this.form)"
-                                            class="admin-action-btn admin-action-delete"
+                                            class="{{ $btn }} {{ $btnDelete }}"
                                             title="Delete"
                                             aria-label="Delete {{ $item->name }}">
                                         <i class="fas fa-trash"></i>
@@ -437,37 +333,43 @@
 
 <!-- DELETE CARD -->
 <div id="menuDeleteOverlay"
-     class="menu-delete-overlay hidden"
+     class="fixed inset-0 z-[100] hidden place-items-center bg-[#09120e]/60 p-4 backdrop-blur-sm"
      aria-hidden="true"
      onclick="if (event.target === this) closeMenuDeleteDialog()">
-    <section class="menu-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="menuDeleteTitle">
 
-        <div class="menu-delete-icon mb-3">
+    <section class="w-full max-w-[320px] rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-[18px] text-[var(--text)] shadow-2xl shadow-black/30"
+             role="dialog" aria-modal="true" aria-labelledby="menuDeleteTitle">
+
+        <div class="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-red-500/10 text-sm text-red-500">
             <i class="fas fa-trash-alt"></i>
         </div>
 
         <h2 id="menuDeleteTitle" class="text-base font-extrabold">Delete menu item?</h2>
 
-        <p class="muted text-xs mt-1.5 leading-5">
+        <p class="muted mt-1.5 text-xs leading-5">
             This will permanently remove the menu item. This action cannot be undone.
         </p>
 
-        <div class="menu-delete-target">
-            <div class="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-white text-xs"
-                 style="background:linear-gradient(145deg,#a78bfa,#6545c4)">
+        <div class="mt-3 flex items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2.5">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-400 to-[#6545c4] text-xs text-white">
                 <i class="fas fa-utensils"></i>
             </div>
             <div class="min-w-0">
-                <p id="menuDeleteName" class="font-bold text-[13px] leading-tight truncate"></p>
-                <p id="menuDeleteCategory" class="text-[10px] muted mt-0.5 truncate"></p>
+                <p id="menuDeleteName" class="truncate text-[13px] font-bold leading-tight"></p>
+                <p id="menuDeleteCategory" class="muted mt-0.5 truncate text-[10px]"></p>
             </div>
         </div>
 
-        <div class="flex justify-end gap-2 mt-4">
-            <button type="button" class="menu-delete-cancel" onclick="closeMenuDeleteDialog()">
+        <div class="mt-4 flex justify-end gap-2">
+            <button type="button"
+                    class="menu-delete-cancel min-h-9 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-3.5 text-xs font-bold text-[var(--text)] transition hover:bg-[var(--bg)] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    onclick="closeMenuDeleteDialog()">
                 Cancel
             </button>
-            <button type="button" class="menu-delete-confirm" onclick="confirmMenuDelete()">
+
+            <button type="button"
+                    class="min-h-9 rounded-[10px] bg-gradient-to-br from-rose-400 to-red-600 px-3.5 text-xs font-bold text-white shadow-md shadow-red-600/25 transition hover:-translate-y-px hover:shadow-lg hover:shadow-red-600/35"
+                    onclick="confirmMenuDelete()">
                 <i class="fas fa-trash-alt mr-1"></i> Delete
             </button>
         </div>
@@ -489,7 +391,9 @@
         const overlay = document.getElementById('menuDeleteOverlay');
         document.getElementById('menuDeleteName').textContent = form.dataset.menuDelete;
         document.getElementById('menuDeleteCategory').textContent = form.dataset.menuCategory || 'Uncategorized';
+
         overlay.classList.remove('hidden');
+        overlay.classList.add('grid');
         overlay.setAttribute('aria-hidden', 'false');
         overlay.querySelector('.menu-delete-cancel').focus();
     }
@@ -497,6 +401,7 @@
     function closeMenuDeleteDialog() {
         const overlay = document.getElementById('menuDeleteOverlay');
         overlay.classList.add('hidden');
+        overlay.classList.remove('grid');
         overlay.setAttribute('aria-hidden', 'true');
         menuDeleteForm = null;
         menuDeleteTrigger?.focus();
@@ -507,12 +412,6 @@
 
         menuDeleteForm.submit();
     }
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && !document.getElementById('menuDeleteOverlay').classList.contains('hidden')) {
-            closeMenuDeleteDialog();
-        }
-    });
 
     // Menu item search and category filter
     const menuSearch = document.getElementById('menuSearch');
@@ -538,14 +437,76 @@
         const noResults = document.getElementById('noMenuSearchResults');
 
         if (noResults) {
-            noResults.classList.toggle(
-                'hidden',
-                visibleCount !== 0 || rows.length === 0
-            );
+            noResults.classList.toggle('hidden', visibleCount !== 0 || rows.length === 0);
         }
     }
 
     menuSearch?.addEventListener('input', filterMenuItems);
-    categoryFilter?.addEventListener('change', filterMenuItems);
+
+    // Custom category dropdown (state lives in data-open / data-selected)
+    const catDropdown = document.getElementById('categoryDropdown');
+    const catButton = document.getElementById('categoryDropdownBtn');
+    const catLabel = document.getElementById('categoryDropdownLabel');
+    const catOptions = [...catDropdown.querySelectorAll('.cat-option')];
+
+    const isCatOpen = () => catDropdown.dataset.open === 'true';
+
+    function setCatDropdown(open) {
+        catDropdown.dataset.open = String(open);
+        catButton.setAttribute('aria-expanded', String(open));
+    }
+
+    function chooseCategory(option) {
+        categoryFilter.value = option.dataset.value;
+        catLabel.textContent = option.querySelector('span').textContent.trim();
+
+        catOptions.forEach(o => {
+            const active = o === option;
+            o.dataset.selected = String(active);
+            o.setAttribute('aria-selected', String(active));
+        });
+
+        setCatDropdown(false);
+        filterMenuItems();
+    }
+
+    catButton.addEventListener('click', () => setCatDropdown(!isCatOpen()));
+
+    catOptions.forEach(option => {
+        option.addEventListener('click', () => chooseCategory(option));
+    });
+
+    document.addEventListener('click', event => {
+        if (!catDropdown.contains(event.target)) setCatDropdown(false);
+    });
+
+    catDropdown.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+
+        event.preventDefault();
+        setCatDropdown(true);
+
+        const current = catOptions.indexOf(document.activeElement);
+        const selected = catOptions.findIndex(o => o.dataset.selected === 'true');
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        const next = current === -1
+            ? Math.max(selected, 0)
+            : (current + step + catOptions.length) % catOptions.length;
+
+        catOptions[next].focus();
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+
+        if (isCatOpen()) {
+            setCatDropdown(false);
+            catButton.focus();
+        }
+
+        if (!document.getElementById('menuDeleteOverlay').classList.contains('hidden')) {
+            closeMenuDeleteDialog();
+        }
+    });
 </script>
 @endpush

@@ -171,104 +171,131 @@
         </div>
     </section>
 
-    {{-- MENU (dynamic from dashboard) + click popup with sizes & prices --}}
+    {{-- MENU: EACH AVAILABLE DATABASE ITEM GETS ITS OWN CARD --}}
     @php
-    $fallbackImg = fn ($id) => "https://images.unsplash.com/{$id}?auto=format&fit=crop&w=800&q=85";
+        $fallbackImg = fn ($id) => "https://images.unsplash.com/{$id}?auto=format&fit=crop&w=1000&q=85";
 
-    /*
-      PRICE DATA: yahan apni asli dishes aur prices likhein.
-      'Category Name' => [ ['name'=>'Dish', 'prices'=>['Size'=>Rs, ...]], ... ]
-      Sirf ek price ho to: 'prices'=>['Full'=>1200]
-    */
-    $menuData = [
-        'Royal Barbecue' => [
-            ['name' => 'Chicken Tikka',   'prices' => ['Quarter' => 450, 'Half' => 850, 'Full' => 1600]],
-            ['name' => 'Seekh Kabab',     'prices' => ['4 Pcs' => 600, '8 Pcs' => 1150]],
-            ['name' => 'Mutton Chops',    'prices' => ['Half Kg' => 2200, '1 Kg' => 4200]],
-        ],
-        'Pakistani Cuisine' => [
-            ['name' => 'Chicken Karahi',  'prices' => ['Half' => 1400, 'Full' => 2600]],
-            ['name' => 'Mutton Handi',    'prices' => ['Half' => 1900, 'Full' => 3600]],
-            ['name' => 'Daal Mash',       'prices' => ['Full' => 650]],
-        ],
-        'Special Platters' => [
-            ['name' => 'Family Platter',  'prices' => ['Medium' => 3500, 'Large' => 5200]],
-            ['name' => 'BBQ Mix Platter', 'prices' => ['Small' => 2400, 'Large' => 4600]],
-        ],
-    ];
+        // Convert common Laravel upload paths and external image URLs into browser URLs.
+        $menuImageUrl = function ($path) use ($fallbackImg) {
+            if (!is_string($path) || trim($path) === '') {
+                return $fallbackImg('photo-1476224203421-9ac39bcb3327');
+            }
 
-    $cards = collect($categories ?? [])->map(function ($c) use ($fallbackImg, $menuData) {
-        // Dashboard category ke "items" hon to wahan se, warna $menuData se
-        $items = isset($c->items) && count($c->items)
-            ? collect($c->items)->map(fn ($i) => ['name' => $i->name, 'prices' => (array) ($i->prices ?? ['Price' => $i->price])])->all()
-            : ($menuData[$c->name] ?? []);
-        return [
-            'img'   => $c->image ? (\Illuminate\Support\Str::startsWith($c->image, ['http://', 'https://']) ? $c->image : asset('storage/' . $c->image)) : $fallbackImg('photo-1476224203421-9ac39bcb3327'),
-            'alt'   => $c->name, 'tag' => $c->tag ?? 'Our Selection', 'name' => $c->name, 'desc' => $c->description,
-            'items' => $items,
-        ];
-    });
+            $path = trim($path);
+            if (\Illuminate\Support\Str::startsWith($path, ['http://', 'https://', 'data:image/'])) {
+                return $path;
+            }
 
-    if ($cards->isEmpty()) {
-        $cards = collect([
-            ['img' => $fallbackImg('photo-1544025162-d76694265947'), 'alt' => 'Grilled barbecue food', 'tag' => 'From the Grill', 'name' => 'Royal Barbecue', 'desc' => 'Enjoy the rich character of grilled food prepared for a memorable dining experience.', 'items' => $menuData['Royal Barbecue']],
-            ['img' => $fallbackImg('photo-1565557623262-b51c2513a641'), 'alt' => 'Traditional curry', 'tag' => 'Traditional Flavours', 'name' => 'Pakistani Cuisine', 'desc' => 'Celebrate familiar culinary traditions with flavourful dishes and inviting aromas.', 'items' => $menuData['Pakistani Cuisine']],
-            ['img' => $fallbackImg('photo-1476224203421-9ac39bcb3327'), 'alt' => 'Plated restaurant food', 'tag' => "Chef's Selection", 'name' => 'Special Platters', 'desc' => 'Beautifully presented selections made for sharing with friends and family.', 'items' => $menuData['Special Platters']],
-        ]);
-    }
+            $path = str_replace('\\', '/', $path);
+            $path = ltrim($path, '/');
+            foreach (['public/storage/', 'storage/app/public/', 'public/'] as $prefix) {
+                if (\Illuminate\Support\Str::startsWith($path, $prefix)) {
+                    $path = substr($path, strlen($prefix));
+                    break;
+                }
+            }
+            if (\Illuminate\Support\Str::startsWith($path, 'storage/')) {
+                $path = substr($path, 8);
+            }
+
+            // Laravel public disk URL; requires php artisan storage:link for uploaded files.
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        };
+
+        $liveMenuItems = \App\Models\MenuItem::with('category')
+            ->where('is_available', true)
+            ->orderBy('category_id')
+            ->orderBy('name')
+            ->get();
+
+        $cards = $liveMenuItems->map(function ($item) use ($menuImageUrl) {
+            // Support common image column names so the homepage uses the actual uploaded image field.
+            $itemImage = $item->image
+                ?? $item->image_path
+                ?? $item->image_url
+                ?? $item->photo
+                ?? $item->thumbnail
+                ?? null;
+            $categoryImage = $item->category?->image
+                ?? $item->category?->image_path
+                ?? $item->category?->image_url
+                ?? null;
+            $imageUrl = $menuImageUrl($itemImage ?: $categoryImage);
+
+            return [
+                'img' => $imageUrl,
+                'alt' => $item->name ?? 'Menu item',
+                'tag' => $item->category?->name ?? 'Available Menu',
+                'name' => $item->name ?? 'Menu Item',
+                'desc' => $item->description ?: ($item->category?->description ?? 'Freshly prepared at Royal Restaurant.'),
+                'items' => [[
+                    'id' => (int) $item->id,
+                    'name' => $item->name,
+                    'prices' => ['Regular' => (float) ($item->price ?? 0)],
+                ]],
+            ];
+        })->values();
     @endphp
     <section id="menu" class="bg-sand py-[75px] sm:py-[110px]">
         <div class="mx-auto w-[90%] max-w-[1200px]">
             <div class="reveal mx-auto mb-14 max-w-[650px] text-center">
                 <p class="section-label">A Taste of Royalty</p>
                 <h2 class="section-title">Our Signature <span class="text-gold">Selections</span></h2>
-                <p class="section-desc mt-5">Kisi bhi card par click karein aur items ki prices dekhein.</p>
+                <p class="section-desc mt-5">Database mein available menu items aur unki current prices dekhein.</p>
             </div>
             <div id="menuGrid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach($cards as $idx => $card)
+                @forelse($cards as $idx => $card)
                 <button type="button" data-open-menu="{{ $idx }}" class="menu-card reveal group block overflow-hidden bg-white text-left" aria-label="{{ $card['name'] }}">
-                    <div class="h-[245px] overflow-hidden sm:h-[265px]"><img src="{{ $card['img'] }}" alt="{{ $card['alt'] }}" loading="lazy" class="h-full w-full object-cover"></div>
+                    <div class="h-[245px] overflow-hidden bg-[#eee8dc] sm:h-[265px]"><img src="{{ $card['img'] }}" alt="{{ $card['alt'] }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $fallbackImg('photo-1476224203421-9ac39bcb3327') }}';" class="h-full w-full object-cover"></div>
                     <div class="p-7">
                         <small class="text-[10px] font-bold uppercase tracking-[2px] text-[#a17b41]">{{ $card['tag'] }}</small>
                         <h3 class="my-2.5 font-serif text-[26px] font-medium">{{ $card['name'] }}</h3>
                         <p class="text-[13px] leading-[1.8] text-[#777a73]">{{ $card['desc'] }}</p>
-                        <span class="menu-link">View Items &amp; Prices <i class="fas fa-arrow-right"></i></span>
+                        <div class="mt-4 flex items-center justify-between border-t border-[#eee8dc] pt-4">
+                            <span class="font-bold text-gold-dark">Rs. {{ number_format((float) ($card['items'][0]['prices']['Regular'] ?? 0)) }}</span>
+                            <span class="menu-link !mt-0">Order Now <i class="fas fa-arrow-right"></i></span>
+                        </div>
                     </div>
                 </button>
-                @endforeach
+                @empty
+                <div class="sm:col-span-2 lg:col-span-3 border border-[#ded9cd] bg-white p-8 text-center">
+                    <i class="fas fa-utensils mb-3 text-3xl text-[#a17b41]"></i>
+                    <h3 class="font-serif text-2xl">Menu is being updated</h3>
+                    <p class="mt-2 text-sm text-[#777a73]">Abhi database mein koi available menu item nahi hai. Admin Dashboard &gt; Menu Items se items add karein aur Available enable karein.</p>
+                </div>
+                @endforelse
             </div>
             <div class="reveal mt-11 text-center"><a href="{{ route('contact.create') }}" class="gold-btn">Ask About Our Full Menu <i class="fas fa-arrow-right"></i></a></div>
         </div>
     </section>
 
-    {{-- CITY MENUS (tabs) --}}
+    {{-- ROYAL MENUS: CITY + MENU TYPE + DISH PRICES --}}
     <section id="menus" class="bg-cream py-[75px] sm:py-[110px]">
         <div class="mx-auto w-[90%] max-w-[1200px] text-center">
-            <div class="reveal mx-auto mb-10 max-w-[650px]">
-                <p class="section-label">Browse</p>
+            <div class="reveal mx-auto mb-10 max-w-[700px]">
+                <p class="section-label">Explore Our Food</p>
                 <h2 class="section-title">Royal <span class="text-gold">Menus</span></h2>
+                <p class="section-desc mt-4">Choose your city and explore our À la carte and Buffet Menu selections.</p>
             </div>
             <div id="cityTabs" class="reveal mb-6 flex flex-wrap justify-center gap-2">
                 @foreach($menuCities as $i => $c)
                 <button type="button" data-city="{{ $c }}" class="tab-btn {{ $i === 0 ? 'on' : '' }}">{{ $c }}</button>
                 @endforeach
             </div>
-            <div id="typeTabs" class="reveal mx-auto mb-8 inline-flex rounded-full border border-gold/40 p-1.5">
+            <div id="typeTabs" class="reveal mx-auto mb-8 inline-flex flex-wrap justify-center rounded-full border border-gold/40 p-1.5">
                 <button type="button" data-type="À la carte" class="tab-btn on !rounded-full">À la carte</button>
                 <button type="button" data-type="Buffet Menu" class="tab-btn !rounded-full">Buffet Menu</button>
             </div>
-            <h3 id="menuTitle" class="mb-6 font-serif text-2xl text-gold-dark"></h3>
-            <div class="relative" data-carousel>
-                <button class="rc-arrow left-0" data-dir="-1" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
-                <div id="menuPages" class="rc-track justify-start sm:justify-center"></div>
-                <button class="rc-arrow right-0" data-dir="1" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
-            </div>
+            <h3 id="menuTitle" class="mb-2 font-serif text-2xl text-gold-dark">Islamabad — À la carte</h3>
+            <p id="menuSubtitle" class="mb-8 text-sm text-[#777a73]">Our freshly prepared selections</p>
+            <div id="cityMenuCards" class="grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-3"></div>
+            <p class="mt-8 text-xs text-[#8b887f]">Prices shown are sample prices. Please confirm current prices with your selected branch.</p>
         </div>
     </section>
 
     <section id="experience" class="bg-dark text-white">
         <div class="grid min-h-[650px] md:grid-cols-2">
-            <div class="min-h-[330px] bg-cover bg-center sm:min-h-[440px] md:min-h-[500px]" style="background-image:url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1300&q=85')" role="img" aria-label="Elegant dining table and food"></div>
+            <div class="min-h-[330px] bg-cover bg-center sm:min-h-[440px] md:min-h-[500px]" style="background-image:url('https://picsum.photos/seed/royal-experience/1300/900')" role="img" aria-label="Elegant dining table and food"></div>
             <div class="reveal flex flex-col justify-center px-[5%] py-[70px] sm:px-[8%] md:py-[75px] lg:px-[10%] lg:py-[100px]">
                 <p class="section-label">The Royal Experience</p>
                 <h2 class="section-title">More Than a Meal. <span class="text-gold">A Memory.</span></h2>
@@ -339,7 +366,7 @@
         </div>
     </section>
 
-    <section class="px-0 py-20 text-center text-white sm:bg-fixed sm:py-[110px]" style="background:linear-gradient(rgba(12,24,17,.78),rgba(12,24,17,.78)),url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=2000&q=85') center/cover;">
+    <section class="px-0 py-20 text-center text-white sm:bg-fixed sm:py-[110px]" style="background:linear-gradient(rgba(12,24,17,.78),rgba(12,24,17,.78)),url('https://picsum.photos/seed/royal-restaurant/2000/1000') center/cover;">
         <div class="reveal mx-auto w-[90%] max-w-[1200px]">
             <p class="section-label !text-gold">Your Table Awaits</p>
             <h2 class="mb-5 font-serif text-[clamp(38px,5vw,60px)] font-medium">Make Every Occasion Special.</h2>
@@ -399,7 +426,7 @@
     {{-- FEEDBACK --}}
     <section id="feedback" class="bg-sand py-[75px] sm:py-[110px]">
         <div class="mx-auto w-[90%] max-w-[600px]">
-            <form method="POST" action="{{ Route::has('feedback.store') ? route('feedback.store') : '#' }}" class="reveal border border-gold/20 bg-white p-7 shadow-sm sm:p-10">
+            <form method="POST" action="{{ route('feedback.store') }}" class="reveal border border-gold/20 bg-white p-7 shadow-sm sm:p-10">
                 @csrf
                 <h2 class="mb-8 text-center font-serif text-[32px] font-medium text-gold-dark">Share Your Feedback</h2>
                 @if(session('success'))<p class="mb-5 border border-gold/40 p-3 text-sm text-gold-dark">{{ session('success') }}</p>@endif
@@ -521,7 +548,7 @@
         </div>
     </footer>
 
-    {{-- MENU POPUP --}}
+    {{-- MENU + CHECKOUT POPUPS --}}
     <div id="menuModal" class="fixed inset-0 z-[100000] hidden items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="mmTitle">
         <div class="max-h-[88vh] w-full max-w-[560px] overflow-y-auto bg-white shadow-2xl">
             <div class="sticky top-0 flex items-center justify-between border-b border-gold/30 bg-dark px-6 py-4 text-white">
@@ -530,11 +557,25 @@
             </div>
             <div id="mmItems" class="divide-y divide-[#ece7da] px-6"></div>
             <div class="border-t border-gold/30 bg-sand px-6 py-5">
-                <div class="mb-4 flex items-center justify-between text-sm font-bold">
-                    <span>Total</span><span id="mmTotal" class="font-serif text-xl text-gold-dark">Rs. 0</span>
-                </div>
-                <a id="mmOrder" href="#" target="_blank" rel="noopener noreferrer" class="gold-btn w-full"><i class="fab fa-whatsapp"></i> Order on WhatsApp</a>
+                <div class="mb-4 flex items-center justify-between text-sm font-bold"><span>Total</span><span id="mmTotal" class="font-serif text-xl text-gold-dark">Rs. 0</span></div>
+                <button type="button" id="mmCheckout" class="gold-btn w-full"><i class="fas fa-shopping-cart"></i> Continue to Order</button>
             </div>
+        </div>
+    </div>
+
+    <div id="checkoutModal" class="fixed inset-0 z-[100001] hidden items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+        <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto bg-white p-6 shadow-2xl">
+            <div class="mb-5 flex items-center justify-between"><h3 id="checkoutTitle" class="font-serif text-2xl">Complete Your Order</h3><button type="button" id="checkoutClose" class="text-2xl" aria-label="Close">&times;</button></div>
+            <form method="POST" action="{{ route('orders.store') }}" id="orderForm">
+                @csrf
+                <input type="hidden" name="items" id="orderItems">
+                <label class="mb-4 block text-sm font-semibold">Customer Name<input name="customer_name" value="{{ old('customer_name') }}" required maxlength="120" class="mt-2 w-full border border-[#ded9cd] p-3" placeholder="Enter your name"></label>
+                <label class="mb-4 block text-sm font-semibold">Phone Number<input name="phone" type="tel" value="{{ old('phone') }}" required maxlength="30" class="mt-2 w-full border border-[#ded9cd] p-3" placeholder="03XXXXXXXXX"></label>
+                <label class="mb-4 block text-sm font-semibold">Delivery Address<textarea name="address" required maxlength="1000" rows="3" class="mt-2 w-full border border-[#ded9cd] p-3" placeholder="Enter complete address">{{ old('address') }}</textarea></label>
+                <label class="mb-4 block text-sm font-semibold">Order Notes<textarea name="notes" maxlength="1000" rows="2" class="mt-2 w-full border border-[#ded9cd] p-3" placeholder="Optional instructions">{{ old('notes') }}</textarea></label>
+                <div class="mb-5 flex justify-between border-t pt-4 font-bold"><span>Order Total</span><span id="checkoutTotal" class="text-gold-dark">Rs. 0</span></div>
+                <button type="submit" id="submitOrder" class="gold-btn w-full"><i class="fas fa-check-circle"></i> Place Order</button>
+            </form>
         </div>
     </div>
 
@@ -625,42 +666,76 @@
         }));
     });
 
-    // ---- City menus ----
-    // Apni menu images yahan daalein: 'Islamabad|À la carte': ['/images/menus/isb-1.jpg', ...]
-    const menuImages = {};
-    const pageCount = 6;
-    const cartePics = ['photo-1565557623262-b51c2513a641','photo-1544025162-d76694265947','photo-1555939594-58d7cb561ad1','photo-1476224203421-9ac39bcb3327','photo-1567620905732-2d1ec7ab7445','photo-1504674900247-0877df9cc836'];
-    const buffetPics = ['photo-1555244162-803834f70033','photo-1547592180-85f173990554','photo-1414235077428-338989a2e8c0','photo-1540189549336-e6e99c3679fe','photo-1482049016688-2d3e1b311543','photo-1559339352-11d035aa65de'];
-    let city = 'Islamabad', type = 'À la carte';
-    const pagesEl = document.getElementById('menuPages');
-    function renderMenu() {
-        document.getElementById('menuTitle').textContent = type;
-        const imgs = menuImages[city + '|' + type] || [];
-        pagesEl.innerHTML = '';
-        for (let i = 0; i < pageCount; i++) {
-            const d = document.createElement('div');
-            const pool = type === 'Buffet Menu' ? buffetPics : cartePics;
-            const src = imgs[i] || `https://images.unsplash.com/${pool[(i + city.length) % pool.length]}?auto=format&fit=crop&w=600&h=860&q=80`;
-            d.className = 'group relative h-[400px] w-[280px] overflow-hidden bg-[#e7e5e0] shadow-md sm:h-[430px] sm:w-[300px]';
-            d.innerHTML = `<img src="${src}" alt="${city} ${type} page ${i + 1}" loading="lazy" class="h-full w-full object-cover transition duration-700 group-hover:scale-110">
-                <div class="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent p-5 text-left text-white">
-                    <div class="font-serif text-2xl text-gold-light">${city}</div>
-                    <div class="mt-1 text-[10px] uppercase tracking-[2px] text-white/80">${type} · Page ${i + 1}</div>
-                </div>`;
-            pagesEl.appendChild(d);
-        }
-        pagesEl.scrollTo({ left: 0 });
+    // ---- Royal city menus ----
+    // Update these sample prices with each branch's approved menu prices.
+    const royalMenuData = {
+        'À la carte': [
+            {name:'Chicken Karahi', detail:'Traditional Pakistani favourite', price:'Half Rs. 1,800 · Full Rs. 3,200', image:'photo-1565557623262-b51c2513a641'},
+            {name:'Chicken Tikka', detail:'Freshly marinated and grilled', price:'Quarter Rs. 550 · Half Rs. 1,000', image:'photo-1544025162-d76694265947'},
+            {name:'Seekh Kabab', detail:'Charcoal grilled kababs', price:'4 Pieces Rs. 700', image:'photo-1555939594-58d7cb561ad1'},
+            {name:'Mutton Handi', detail:'Slow-cooked rich handi', price:'Half Rs. 2,400', image:'photo-1547592180-85f173990554'},
+            {name:'BBQ Family Platter', detail:'A selection made for sharing', price:'Rs. 3,500', image:'photo-1476224203421-9ac39bcb3327'},
+            {name:'Daal Mash', detail:'Classic comfort food', price:'Rs. 750', image:'photo-1504674900247-0877df9cc836'},
+            {name:'Fresh Salad', detail:'Seasonal fresh vegetables', price:'Rs. 450', image:'photo-1540189549336-e6e99c3679fe'}
+        ],
+        'Buffet Menu': [
+            {name:'Royal Lunch Buffet', detail:'A selection of lunch favourites', price:'Rs. 1,999 per person', image:'photo-1555244162-803834f70033'},
+            {name:'Royal Dinner Buffet', detail:'An evening dining selection', price:'Rs. 2,499 per person', image:'photo-1414235077428-338989a2e8c0'},
+            {name:'Weekend Family Buffet', detail:'Enjoy a meal together', price:'Rs. 2,799 per person', image:'photo-1559339352-11d035aa65de'}
+        ]
+    };
+    let selectedCity = 'Islamabad';
+    let selectedMenuType = 'À la carte';
+    const cityMenuCards = document.getElementById('cityMenuCards');
+    const menuTitle = document.getElementById('menuTitle');
+    const menuSubtitle = document.getElementById('menuSubtitle');
+
+    function renderCityMenu() {
+        menuTitle.textContent = selectedCity + ' — ' + selectedMenuType;
+        menuSubtitle.textContent = selectedMenuType === 'Buffet Menu'
+            ? 'Buffet prices are shown per person where applicable.'
+            : 'Explore individual dishes and their sample prices.';
+        cityMenuCards.innerHTML = '';
+        (royalMenuData[selectedMenuType] || []).forEach(item => {
+            const card = document.createElement('article');
+            card.className = 'overflow-hidden border border-[#e4ddcf] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl';
+            const img = document.createElement('img');
+            img.src = 'https://images.unsplash.com/' + item.image + '?auto=format&fit=crop&w=700&q=80';
+            img.alt = item.name;
+            img.loading = 'lazy';
+            img.className = 'h-48 w-full object-cover';
+            const body = document.createElement('div');
+            body.className = 'p-5';
+            const name = document.createElement('h4');
+            name.className = 'font-serif text-xl text-dark';
+            name.textContent = item.name;
+            const detail = document.createElement('p');
+            detail.className = 'mt-2 min-h-10 text-sm leading-6 text-[#777a73]';
+            detail.textContent = item.detail;
+            const price = document.createElement('p');
+            price.className = 'mt-4 border-t border-[#eee8dc] pt-4 text-sm font-bold text-gold-dark';
+            price.textContent = item.price;
+            body.append(name, detail, price);
+            card.append(img, body);
+            cityMenuCards.appendChild(card);
+        });
     }
-    function bindTabs(id, attr, set) {
+
+    function setupMenuTabs(id, dataAttr, onSelect) {
         const wrap = document.getElementById(id);
-        wrap.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-            wrap.querySelectorAll('button').forEach(x => x.classList.remove('on'));
-            b.classList.add('on'); set(b.dataset[attr]); renderMenu();
-        }));
+        if (!wrap) return;
+        wrap.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', () => {
+                wrap.querySelectorAll('button').forEach(tab => tab.classList.remove('on'));
+                button.classList.add('on');
+                onSelect(button.dataset[dataAttr]);
+                renderCityMenu();
+            });
+        });
     }
-    bindTabs('cityTabs', 'city', v => city = v);
-    bindTabs('typeTabs', 'type', v => type = v);
-    renderMenu();
+    setupMenuTabs('cityTabs', 'city', value => selectedCity = value);
+    setupMenuTabs('typeTabs', 'type', value => selectedMenuType = value);
+    renderCityMenu();
 
     // ---- Map ----
     const places = {!! json_encode($mapPlaces) !!};
@@ -673,75 +748,140 @@
         document.getElementById('royalMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }));
 
-    // ---- Menu popup (items, size dropdown, price, WhatsApp order) ----
+    // ---- Menu selection + database checkout ----
     const menuCardsData = {!! json_encode($cards->values()) !!};
-    const WA_NUMBER = '923005371521';
     const modal = document.getElementById('menuModal');
+    const checkoutModal = document.getElementById('checkoutModal');
     const mmItems = document.getElementById('mmItems');
     const mmTotal = document.getElementById('mmTotal');
-    const mmOrder = document.getElementById('mmOrder');
     const rs = n => 'Rs. ' + Number(n).toLocaleString('en-PK');
     let currentCat = null;
 
-    function recalc() {
-        let total = 0, lines = [];
+    function selectedItems() {
+        const items = [];
         mmItems.querySelectorAll('[data-row]').forEach(row => {
-            const qty = parseInt(row.querySelector('.qty').value, 10) || 0;
-            const sel = row.querySelector('select');
-            const price = Number(sel.value);
-            const size = sel.options[sel.selectedIndex].dataset.label;
-            row.querySelector('.line-price').textContent = rs(price);
-            if (qty > 0) {
-                total += price * qty;
-                lines.push(`${qty} x ${row.dataset.name} (${size}) = ${rs(price * qty)}`);
+            const quantity = Math.max(0, Math.min(50, parseInt(row.querySelector('.qty').value, 10) || 0));
+            const select = row.querySelector('select');
+            if (quantity > 0) {
+                items.push({ menu_item_id: Number(row.dataset.id), size: select.options[select.selectedIndex].dataset.label || 'Regular', quantity });
             }
         });
-        mmTotal.textContent = rs(total);
-        const msg = lines.length
-            ? `Assalam o Alaikum, I would like to order from ${currentCat.name}:\n${lines.join('\n')}\nTotal: ${rs(total)}`
-            : `Assalam o Alaikum, I would like to know about ${currentCat.name}.`;
-        mmOrder.href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+        return items;
     }
 
-    function openMenu(i) {
-        currentCat = menuCardsData[i];
+    function recalcMenu() {
+        let total = 0;
+        mmItems.querySelectorAll('[data-row]').forEach(row => {
+            const quantity = Math.max(0, Math.min(50, parseInt(row.querySelector('.qty').value, 10) || 0));
+            const select = row.querySelector('select');
+            const price = Number(select.value) || 0;
+            row.querySelector('.line-price').textContent = rs(price);
+            total += price * quantity;
+        });
+        mmTotal.textContent = rs(total);
+    }
+
+    function openMenu(index) {
+        currentCat = menuCardsData[index];
         document.getElementById('mmTitle').textContent = currentCat.name;
         mmItems.innerHTML = '';
-        if (!currentCat.items.length) {
-            mmItems.innerHTML = '<p class="py-8 text-center text-sm text-[#777a73]">Is category ke items jald add kiye jayenge.</p>';
-        }
-        currentCat.items.forEach(item => {
+        const items = currentCat.items || [];
+        if (!items.length) mmItems.innerHTML = '<p class="py-8 text-center text-sm text-[#777a73]">Is category mein abhi items available nahi hain.</p>';
+
+        items.forEach(item => {
             const row = document.createElement('div');
             row.dataset.row = '1';
-            row.dataset.name = item.name;
+            row.dataset.id = item.id || '';
             row.className = 'flex flex-wrap items-center gap-3 py-4';
-            const opts = Object.entries(item.prices)
-                .map(([label, p]) => `<option value="${p}" data-label="${label}">${label} - ${rs(p)}</option>`).join('');
-            row.innerHTML = `
-                <div class="min-w-[140px] flex-1">
-                    <div class="font-serif text-lg">${item.name}</div>
-                    <div class="line-price text-sm font-bold text-gold-dark"></div>
-                </div>
-                <select class="border border-[#ded9cd] bg-white px-3 py-2 text-sm outline-none focus:border-gold">${opts}</select>
-                <input type="number" min="0" max="50" value="0" class="qty w-16 border border-[#ded9cd] px-2 py-2 text-center text-sm outline-none focus:border-gold" aria-label="Quantity">`;
-            row.querySelector('select').addEventListener('change', recalc);
-            row.querySelector('.qty').addEventListener('input', recalc);
+            const details = document.createElement('div');
+            details.className = 'min-w-[140px] flex-1';
+            const name = document.createElement('div');
+            name.className = 'font-serif text-lg';
+            name.textContent = item.name;
+            const priceLabel = document.createElement('div');
+            priceLabel.className = 'line-price text-sm font-bold text-gold-dark';
+            details.append(name, priceLabel);
+
+            const select = document.createElement('select');
+            select.className = 'border border-[#ded9cd] bg-white px-3 py-2 text-sm';
+            const prices = item.prices || {};
+            Object.entries(prices).forEach(([label, amount]) => {
+                const option = document.createElement('option');
+                option.value = Number(amount) || 0;
+                option.dataset.label = label;
+                option.textContent = `${label} - ${rs(amount)}`;
+                select.appendChild(option);
+            });
+            const qty = document.createElement('input');
+            qty.type = 'number'; qty.min = '0'; qty.max = '50'; qty.value = '0';
+            qty.className = 'qty w-16 border border-[#ded9cd] px-2 py-2 text-center text-sm';
+            qty.setAttribute('aria-label', 'Quantity');
+            select.addEventListener('change', recalcMenu);
+            qty.addEventListener('input', recalcMenu);
+            row.append(details, select, qty);
             mmItems.appendChild(row);
         });
-        recalc();
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        recalcMenu();
+        modal.classList.remove('hidden'); modal.classList.add('flex');
         document.body.style.overflow = 'hidden';
     }
-    function closeMenu() {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        document.body.style.overflow = '';
-    }
-    document.querySelectorAll('[data-open-menu]').forEach(b => b.addEventListener('click', () => openMenu(+b.dataset.openMenu)));
+
+    function closeMenu() { modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.style.overflow = ''; }
+    function closeCheckout() { checkoutModal.classList.add('hidden'); checkoutModal.classList.remove('flex'); document.body.style.overflow = ''; }
+
+    document.querySelectorAll('[data-open-menu]').forEach(button => button.addEventListener('click', () => openMenu(Number(button.dataset.openMenu))));
     document.getElementById('mmClose').addEventListener('click', closeMenu);
-    modal.addEventListener('click', e => { if (e.target === modal) closeMenu(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+    modal.addEventListener('click', event => { if (event.target === modal) closeMenu(); });
+
+    document.getElementById('mmCheckout').addEventListener('click', () => {
+        const items = selectedItems();
+        if (!items.length) { alert('Order ke liye kam az kam aik item aur quantity select karein.'); return; }
+        if (items.some(item => !Number.isInteger(item.menu_item_id) || item.menu_item_id <= 0)) {
+            alert('Selected menu item database record se link nahi hai. Admin se menu item verify karein.'); return;
+        }
+        document.getElementById('orderItems').value = JSON.stringify(items);
+        document.getElementById('checkoutTotal').textContent = mmTotal.textContent;
+        closeMenu();
+        checkoutModal.classList.remove('hidden'); checkoutModal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    });
+
+    document.getElementById('checkoutClose').addEventListener('click', closeCheckout);
+    checkoutModal.addEventListener('click', event => { if (event.target === checkoutModal) closeCheckout(); });
+    document.getElementById('orderForm').addEventListener('submit', event => {
+        const items = selectedItems();
+        if (!items.length || items.some(item => !item.menu_item_id)) {
+            event.preventDefault(); alert('Please select valid database menu items.'); return;
+        }
+        document.getElementById('orderItems').value = JSON.stringify(items);
+        const button = document.getElementById('submitOrder');
+        button.disabled = true; button.textContent = 'Submitting Order...';
+    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') { closeMenu(); closeCheckout(); } });
+
+    // ---- Image fallback: Unsplash/storage image fail ho to alternate photo try karein ----
+    (function () {
+        function fallbackImage(img) {
+            if (!img || img.dataset.fallbackTried === '2') return;
+            const seed = (img.alt || 'royal-food').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 35) || 'royal-food';
+            if (img.dataset.fallbackTried !== '1') {
+                img.dataset.fallbackTried = '1';
+                img.src = 'https://picsum.photos/seed/royal-' + seed + '/900/650';
+            } else {
+                img.dataset.fallbackTried = '2';
+                img.onerror = null;
+                // Offline-safe visible fallback if both image services fail.
+                img.src = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="650" viewBox="0 0 900 650"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#192720"/><stop offset="1" stop-color="#354b3d"/></linearGradient></defs><rect width="900" height="650" fill="url(#g)"/><circle cx="450" cy="255" r="105" fill="#d6ad69" opacity=".18"/><path d="M300 390 Q450 280 600 390 L650 475 L250 475Z" fill="#d6ad69" opacity=".8"/><text x="450" y="545" text-anchor="middle" font-family="Arial" font-size="34" fill="#efd39a">ROYAL RESTAURANT</text></svg>'
+                );
+            }
+        }
+        // Capture errors for existing and dynamically inserted images.
+        document.addEventListener('error', event => {
+            if (event.target && event.target.tagName === 'IMG') fallbackImage(event.target);
+        }, true);
+    })();
+
 </script>
 </body>
 </html>
